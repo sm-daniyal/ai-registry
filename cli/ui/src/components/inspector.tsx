@@ -88,7 +88,7 @@ function FileView({ artifact }: { artifact: UiArtifact }) {
   } else if (file.data !== undefined) {
     body = (
       <Suspense fallback={<FileSkeleton />}>
-        <MarkdownView text={file.data.text} />
+        <MarkdownView text={file.data.text} kind={artifact.kind} />
       </Suspense>
     );
   }

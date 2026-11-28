@@ -47,17 +47,48 @@ function Frontmatter({ yaml }: { yaml: string }) {
   );
 }
 
+/** Top-level JSON objects (such as an MCP server's `server.json`) render as source, not Markdown. */
+function isJsonObject(text: string): boolean {
+  const trimmed = text.trimStart();
+  if (!trimmed.startsWith("{")) return false;
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed);
+  } catch {
+    return false;
+  }
+}
+
+function isSourceDocument(text: string, kind: string | undefined): boolean {
+  return kind === "semantic_model" || (kind === "mcp_server" && isJsonObject(text));
+}
+
+function EmptyFile() {
+  return (
+    <p>
+      <em>The file is empty.</em>
+    </p>
+  );
+}
+
 /** Raw HTML stays out (no rehype-raw), and the tree is sanitized before React sees it. */
-export default function MarkdownView({ text }: { text: string }) {
-  const front = FRONTMATTER.exec(text);
-  const body = front === null ? text : text.slice(front[0].length);
+export default function MarkdownView({ text, kind }: { text: string; kind?: string }) {
+  const raw = text.startsWith("\uFEFF") ? text.slice(1) : text;
+  if (raw.trim() === "") return <EmptyFile />;
+  if (isSourceDocument(raw, kind)) {
+    return (
+      <pre>
+        <code>{raw}</code>
+      </pre>
+    );
+  }
+  const front = FRONTMATTER.exec(raw);
+  const body = front === null ? raw : raw.slice(front[0].length);
   return (
     <>
       {front?.[1] !== undefined && <Frontmatter yaml={front[1]} />}
       {body.trim() === "" ? (
-        <p>
-          <em>The file is empty.</em>
-        </p>
+        <EmptyFile />
       ) : (
         <Markdown
           remarkPlugins={[remarkGfm]}
